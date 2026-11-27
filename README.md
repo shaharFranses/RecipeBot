@@ -4,9 +4,11 @@ A WhatsApp bot that takes an Instagram reel link and saves the recipe to a recip
 
 ## Status
 - [x] Reel → recipe extractor (`bot/`)
-- [ ] WhatsApp webhook (Meta Cloud API test number)
-- [ ] Storage (Supabase)
+- [x] WhatsApp webhook (`bot/server.py`, Meta Cloud API test number)
+- [x] Storage (Supabase, `supabase/schema.sql`)
 - [ ] Recipe book website (GitHub Pages, Hebrew RTL, editable notes)
+
+Setup: see [SETUP.md](SETUP.md).
 
 ## Try the extractor
 ```bash
@@ -19,3 +21,8 @@ python bot/cli.py --caption-only https://www.instagram.com/reel/XXXX/   # no key
 How it works: `bot/reel.py` downloads the reel's caption and a small copy of the video with yt-dlp.
 `bot/extract.py` sends both to Gemini, which returns a structured Hebrew recipe
 (title, servings, time, ingredients with amounts, steps, tags).
+
+## Tests
+```bash
+python tests/test_server.py
+```
