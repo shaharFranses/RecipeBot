@@ -17,7 +17,7 @@ class ReelError(Exception):
 
 @dataclass
 class Reel:
-    url: str
+    url: str | None
     caption: str
     author: str
     thumbnail: str | None
@@ -26,7 +26,11 @@ class Reel:
 
 def find_instagram_url(text: str) -> str | None:
     match = INSTAGRAM_URL.search(text or "")
-    return match.group(0) if match else None
+    if not match:
+        return None
+    # One canonical form, so the same reel isn't saved twice.
+    url = match.group(0).replace("http://", "https://").replace("://instagram.com", "://www.instagram.com")
+    return re.sub(r"/(reels|tv)/", "/reel/", url, flags=re.I)
 
 
 def fetch_reel(url: str, workdir: Path | None = None, download_video: bool = True) -> Reel:
