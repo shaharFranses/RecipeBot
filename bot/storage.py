@@ -10,7 +10,11 @@ from reel import Reel
 
 
 def _base() -> str:
-    return os.environ["SUPABASE_URL"].rstrip("/") + "/rest/v1/recipes"
+    url = os.environ["SUPABASE_URL"].strip().rstrip("/")
+    # Accept the project URL with or without the "/rest/v1" suffix.
+    if url.endswith("/rest/v1"):
+        url = url[: -len("/rest/v1")]
+    return url + "/rest/v1/recipes"
 
 
 def _headers() -> dict[str, str]:

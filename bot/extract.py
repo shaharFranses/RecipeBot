@@ -10,7 +10,8 @@ from pydantic import BaseModel
 
 from reel import Reel
 
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# "gemini-flash-latest" always points at Google's current Flash model, so it doesn't go stale.
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
 
 
 class Ingredient(BaseModel):
