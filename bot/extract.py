@@ -1,7 +1,9 @@
 """Turn a reel (caption + video) into a structured Hebrew recipe with Gemini."""
 from __future__ import annotations
 
+import logging
 import os
+import re
 import time
 
 from google import genai
@@ -10,8 +12,40 @@ from pydantic import BaseModel
 
 from reel import Reel
 
-# "gemini-flash-latest" always points at Google's current Flash model, so it doesn't go stale.
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
+log = logging.getLogger("recipebot")
+
+# Google retires model names often. Unless GEMINI_MODEL is set, pick the newest
+# plain "flash" model this API key can use, so the bot doesn't break when one is retired.
+FALLBACK_MODEL = "gemini-3.8-flash"
+_SKIP = ("lite", "preview", "exp", "tts", "image", "live", "audio", "thinking", "embedding", "8b")
+_model_cache: str | None = None
+
+
+def _version(name: str) -> tuple:
+    m = re.search(r"gemini-(\d+(?:\.\d+)?)", name)
+    return tuple(int(x) for x in m.group(1).split(".")) if m else (0,)
+
+
+def pick_model(client: genai.Client) -> str:
+    global _model_cache
+    if os.environ.get("GEMINI_MODEL"):
+        return os.environ["GEMINI_MODEL"]
+    if _model_cache:
+        return _model_cache
+    try:
+        names = []
+        for m in client.models.list():
+            name = (m.name or "").removeprefix("models/")
+            actions = getattr(m, "supported_actions", None) or []
+            if "flash" in name and not any(x in name for x in _SKIP) and (not actions or "generateContent" in actions):
+                names.append(name)
+        if names:
+            _model_cache = max(names, key=lambda n: (_version(n), -len(n)))
+    except Exception:
+        log.exception("could not list Gemini models")
+    _model_cache = _model_cache or FALLBACK_MODEL
+    log.info("using Gemini model %s", _model_cache)
+    return _model_cache
 
 
 class Ingredient(BaseModel):
@@ -70,7 +104,7 @@ def extract_recipe(reel: Reel) -> Recipe:
     contents.append(PROMPT.format(caption=reel.caption or "(אין כיתוב)"))
     try:
         resp = client.models.generate_content(
-            model=MODEL,
+            model=pick_model(client),
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
